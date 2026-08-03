@@ -1,0 +1,7 @@
+# Normaliza as quebras de linha: LF no repositório, convenção da plataforma no
+# working directory. Evita diffs de arquivo inteiro entre Windows e Linux.
+* text=auto
+
+*.png binary
+*.jpg binary
+*.zip binary

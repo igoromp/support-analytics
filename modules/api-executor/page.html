@@ -1,0 +1,129 @@
+<div class="tabs">
+  <button class="tab active" data-tab="run">Executar</button>
+  <button class="tab" data-tab="apis">APIs cadastradas</button>
+</div>
+
+<!-- ===================== TAB: Executar ===================== -->
+<div class="tab-panel active" id="panel-run">
+  <div class="card">
+    <h2>1 · API e dados</h2>
+    <div class="form-row">
+      <label class="field grow">
+        <span>API cadastrada</span>
+        <select id="run-api" class="mono"></select>
+      </label>
+      <label class="field shrink" style="min-width:120px">
+        <span>Workers</span>
+        <input type="number" id="run-workers" min="1" max="20" value="1">
+      </label>
+      <label class="field shrink" style="min-width:130px">
+        <span>Timeout (s)</span>
+        <input type="number" id="run-timeout" min="1" max="300" value="30">
+      </label>
+    </div>
+    <div style="margin-top:8px">
+      <span class="field-label">Arquivo de dados (CSV ou JSON) — opcional; sem arquivo a API executa 1 vez</span>
+      <div id="run-picker"></div>
+      <div id="run-fields" class="hidden" style="margin-top:10px">
+        <span class="field-label">Campos disponíveis para usar como <code>{{campo}}</code> na URL, query, headers e body:</span>
+        <div id="run-fields-list" class="flex flex-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Retorno da API</h2>
+    <label style="display:inline-flex;align-items:center;gap:6px;margin-bottom:10px">
+      <input type="checkbox" id="save-enabled"> Salvar o retorno na pasta compartilhada
+    </label>
+    <div id="save-options" class="hidden">
+      <div class="form-row">
+        <label class="field shrink" style="min-width:130px">
+          <span>Formato</span>
+          <select id="save-format">
+            <option value="json">json</option>
+            <option value="txt">txt</option>
+          </select>
+        </label>
+        <label class="field shrink" style="min-width:190px">
+          <span>O que salvar</span>
+          <select id="save-mode">
+            <option value="full">retorno completo</option>
+            <option value="fields">apenas campos escolhidos</option>
+          </select>
+        </label>
+        <label class="field grow">
+          <span>Nome do arquivo de saída</span>
+          <input type="text" id="save-filename" class="mono" placeholder="resultado-execucao">
+        </label>
+      </div>
+      <div id="save-fields-wrap" class="hidden">
+        <span class="field-label">Campos do retorno (dot notation)</span>
+        <div id="save-fields-list"></div>
+        <button class="btn btn-secondary btn-sm" id="add-save-field" type="button">+ Adicionar campo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3 · Execução</h2>
+    <button class="btn" id="run-btn">▶ Executar</button>
+    <div id="job-status" class="hidden" style="margin-top:14px">
+      <div class="progress-bar"><div id="job-progress"></div></div>
+      <p class="mono small" id="job-summary" style="margin:8px 0"></p>
+      <div id="job-errors"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TAB: APIs cadastradas ===================== -->
+<div class="tab-panel" id="panel-apis">
+  <div class="card">
+    <h2 id="api-form-title">Cadastrar nova API</h2>
+    <div class="form-row">
+      <label class="field grow">
+        <span>Nome</span>
+        <input type="text" id="api-name" placeholder="ex.: Atualizar taxa de settlement">
+      </label>
+      <label class="field shrink" style="min-width:120px">
+        <span>Verbo</span>
+        <select id="api-method">
+          <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+        </select>
+      </label>
+    </div>
+    <label class="field">
+      <span>URL — use <code>{{campo}}</code> para valores vindos do arquivo (ex.: https://api.exemplo.com/pedidos/{{id}})</span>
+      <input type="text" id="api-url" class="mono" placeholder="https://…">
+    </label>
+    <div class="form-row">
+      <div class="grow">
+        <span class="field-label">Query params</span>
+        <div id="api-query-list"></div>
+        <button class="btn btn-secondary btn-sm" id="add-query" type="button">+ query param</button>
+      </div>
+      <div class="grow">
+        <span class="field-label">Headers</span>
+        <div id="api-headers-list"></div>
+        <button class="btn btn-secondary btn-sm" id="add-header" type="button">+ header</button>
+      </div>
+    </div>
+    <label class="field" style="margin-top:10px">
+      <span>Body (JSON com placeholders <code>{{campo}}</code>) — ignorado em GET/DELETE</span>
+      <textarea id="api-body" rows="6" placeholder='{"valor": "{{taxa}}", "motivo": "ajuste manual"}'></textarea>
+    </label>
+    <label style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px">
+      <input type="checkbox" id="api-has-response" checked> Esta API tem retorno relevante
+    </label>
+    <div class="flex">
+      <button class="btn" id="api-save-btn">Salvar API</button>
+      <button class="btn btn-secondary hidden" id="api-cancel-btn" type="button">Cancelar edição</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>APIs cadastradas</h2>
+    <p class="card-hint">Salvas em <code>data/config/apis.json</code> — sem banco de dados.</p>
+    <div id="api-list"></div>
+  </div>
+</div>

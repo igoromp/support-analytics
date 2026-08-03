@@ -1,0 +1,14 @@
+node_modules/
+dist/
+
+# dados locais: a pasta compartilhada, os temporários e os cadastros
+# (data/config/servicebus.json guarda connection strings — nunca versionar)
+data/shared/*
+data/tmp/*
+data/config/*
+!data/shared/.gitkeep
+!data/tmp/.gitkeep
+!data/config/.gitkeep
+
+# preferências da máquina (permissões do Claude Code)
+.claude/settings.local.json

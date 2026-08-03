@@ -1,0 +1,47 @@
+<div class="card">
+  <h2>1 · Escolha o arquivo CSV</h2>
+  <div id="picker"></div>
+  <div style="margin-top:12px">
+    <button class="btn" id="preview-btn" disabled>Carregar preview</button>
+  </div>
+</div>
+
+<div class="card hidden" id="preview-card">
+  <h2>2 · Preview do conteúdo</h2>
+  <p class="card-hint" id="preview-info"></p>
+  <div id="preview-table"></div>
+</div>
+
+<div class="card hidden" id="fields-card">
+  <h2>3 · Campos do JSON</h2>
+  <p class="card-hint">Marque os campos que devem compor cada item do array e, se quiser, renomeie-os.</p>
+  <div id="field-mapper"></div>
+</div>
+
+<div class="card hidden" id="fixed-card">
+  <h2>4 · Campos fixos (opcional)</h2>
+  <p class="card-hint">Campos com valor fixo incluídos em todos os itens do JSON gerado.</p>
+  <div id="fixed-list"></div>
+  <button class="btn btn-secondary btn-sm" id="add-fixed" type="button">+ Adicionar campo fixo</button>
+</div>
+
+<div class="card hidden" id="output-card">
+  <h2>5 · Gerar JSON</h2>
+  <div id="nested-option" class="hidden" style="margin-bottom:12px">
+    <span class="field-label">O CSV contém colunas em dot notation. Como gerar o JSON?</span>
+    <label style="display:block;margin:4px 0"><input type="radio" name="nested" value="flat" checked> Manter chaves em dot notation (<code>"a.b.c": valor</code>)</label>
+    <label style="display:block;margin:4px 0"><input type="radio" name="nested" value="nested"> Criar objetos aninhados (<code>{"a": {"b": {"c": valor}}}</code>)</label>
+  </div>
+  <div class="form-row">
+    <label class="field grow">
+      <span>Nome do arquivo (ao salvar na pasta compartilhada)</span>
+      <input type="text" id="out-filename" class="mono" placeholder="resultado.json">
+    </label>
+    <button class="btn btn-secondary shrink" id="download-btn">Baixar JSON</button>
+    <button class="btn shrink" id="save-btn">Salvar na pasta compartilhada</button>
+  </div>
+  <div id="result-preview-wrap" class="hidden" style="margin-top:14px">
+    <span class="field-label">Preview do resultado (3 primeiros itens)</span>
+    <pre class="code-preview" id="result-preview"></pre>
+  </div>
+</div>

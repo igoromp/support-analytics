@@ -1,0 +1,26 @@
+{
+  "name": "support-analytics",
+  "version": "1.0.0",
+  "description": "Toolkit modular para rotinas de suporte: conversão CSV/JSON, execução de APIs em lote e exploração de DLQs do Azure Service Bus",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "test:watch": "node --test --watch \"tests/**/*.test.js\"",
+    "package": "node scripts/package.js",
+    "sb:up": "docker compose -f local-dev/servicebus-emulator/docker-compose.yaml up -d",
+    "sb:down": "docker compose -f local-dev/servicebus-emulator/docker-compose.yaml down -v",
+    "sb:logs": "docker compose -f local-dev/servicebus-emulator/docker-compose.yaml logs -f emulator",
+    "sb:seed": "node local-dev/seed-dlq.js",
+    "sb:check": "node local-dev/check-dlq.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@azure/service-bus": "^7.9.5",
+    "express": "^4.21.2",
+    "multer": "^2.2.0"
+  }
+}

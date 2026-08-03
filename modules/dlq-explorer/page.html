@@ -1,0 +1,157 @@
+<div class="card">
+  <h2>1 · Conexão Service Bus</h2>
+  <div class="form-row">
+    <label class="field grow">
+      <span>Conexão ativa</span>
+      <select id="conn-select" class="mono"></select>
+    </label>
+    <button class="btn btn-secondary shrink" id="conn-toggle-form" type="button">+ Nova conexão</button>
+  </div>
+  <div id="conn-form" class="hidden" style="margin-top:8px">
+    <div class="form-row">
+      <label class="field">
+        <span>Nome (ex.: produção, homologação)</span>
+        <input type="text" id="conn-name" placeholder="produção">
+      </label>
+      <label class="field grow">
+        <span>Connection string</span>
+        <input type="password" id="conn-string" class="mono" placeholder="Endpoint=sb://…;SharedAccessKeyName=…;SharedAccessKey=…">
+      </label>
+      <button class="btn shrink" id="conn-save" type="button">Salvar conexão</button>
+    </div>
+  </div>
+  <div id="conn-list" style="margin-top:6px"></div>
+</div>
+
+<div class="card">
+  <h2>2 · Fila ou tópico</h2>
+  <div class="form-row">
+    <label class="field shrink" style="min-width:150px">
+      <span>Tipo</span>
+      <select id="entity-type">
+        <option value="queue">fila (queue)</option>
+        <option value="topic">tópico (topic)</option>
+      </select>
+    </label>
+    <label class="field grow" id="queue-field">
+      <span>Nome da fila</span>
+      <input type="text" id="entity-queue" class="mono" placeholder="ex.: settlement-queue">
+    </label>
+    <label class="field grow hidden" id="topic-field">
+      <span>Nome do tópico</span>
+      <input type="text" id="entity-topic" class="mono" placeholder="ex.: settlement-topic">
+    </label>
+    <label class="field grow hidden" id="subscription-field">
+      <span>Subscription</span>
+      <input type="text" id="entity-subscription" class="mono" placeholder="ex.: settlement-sub">
+    </label>
+    <button class="btn btn-secondary shrink" id="test-btn" type="button">Testar conexão</button>
+  </div>
+  <div id="test-result"></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="view">Visualizar</button>
+  <button class="tab" data-tab="export">Export</button>
+  <button class="tab" data-tab="one">Reprocessar 1 a 1</button>
+  <button class="tab" data-tab="batch">Reprocessar via CSV</button>
+</div>
+
+<!-- ===================== Visualizar ===================== -->
+<div class="tab-panel active" id="panel-view">
+  <div class="card">
+    <h2>Dead letters na fila</h2>
+    <p class="card-hint">Leitura por <em>peek</em> — as mensagens continuam na DLQ. Marque as que quiser devolver para a fila/tópico de origem; o body é reenviado <strong>sem alteração</strong> (para alterar, use o reprocessamento via CSV).</p>
+    <div class="form-row">
+      <label class="field shrink" style="min-width:200px">
+        <span>Quantidade máxima a carregar</span>
+        <input type="number" id="view-max" min="1" max="2000" value="200">
+      </label>
+      <label class="field grow">
+        <span>Filtrar (messageId, motivo ou body)</span>
+        <input type="text" id="view-filter" class="mono" placeholder="ex.: TimeoutError, P0042">
+      </label>
+      <button class="btn shrink" id="view-load">Carregar dead letters</button>
+    </div>
+    <div id="view-empty" class="empty-state hidden">Nenhuma dead letter carregada. Clique em “Carregar dead letters”.</div>
+    <div id="view-table" style="margin-top:12px"></div>
+    <div id="view-pagination"></div>
+    <div id="view-actions" class="flex hidden" style="margin-top:12px">
+      <button class="btn" id="view-reprocess">Reprocessar selecionadas</button>
+      <button class="btn btn-secondary" id="view-clear-selection" type="button">Limpar seleção</button>
+    </div>
+    <div id="view-status" class="hidden" style="margin-top:14px">
+      <p class="mono small" id="view-summary"></p>
+      <div id="view-errors"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Export ===================== -->
+<div class="tab-panel" id="panel-export">
+  <div class="card">
+    <h2>Exportar dead letters (não afeta a fila)</h2>
+    <p class="card-hint">As mensagens são lidas via <em>peek</em> — permanecem intactas na DLQ. O resultado é salvo em JSON na pasta compartilhada.</p>
+    <div class="form-row">
+      <label class="field shrink" style="min-width:200px">
+        <span>Quantidade máxima de mensagens</span>
+        <input type="number" id="export-max" min="1" max="50000" value="100">
+      </label>
+      <button class="btn shrink" id="export-btn">Exportar DLQs</button>
+    </div>
+    <p class="card-hint mb-0">Se a DLQ tiver menos mensagens que o máximo, apenas as existentes são trazidas.</p>
+    <div id="export-result"></div>
+  </div>
+</div>
+
+<!-- ===================== Reprocess 1 a 1 ===================== -->
+<div class="tab-panel" id="panel-one">
+  <div class="card">
+    <h2>Reprocessar 1 a 1</h2>
+    <p class="card-hint">Busca <strong>uma</strong> mensagem da DLQ (com lock), permite editar o body e reenviar para a fila/tópico de origem. Ao reenviar, a mensagem é removida da DLQ; ao devolver, ela volta intacta.</p>
+    <button class="btn" id="fetch-btn">Buscar próxima mensagem da DLQ</button>
+    <div id="one-message" class="hidden" style="margin-top:14px">
+      <dl class="kv" id="one-meta"></dl>
+      <label class="field" style="margin-top:12px">
+        <span>Body da mensagem (edite antes de reenviar)</span>
+        <textarea id="one-body" rows="14"></textarea>
+      </label>
+      <div class="flex">
+        <button class="btn" id="one-send">Reenviar para a origem</button>
+        <button class="btn btn-secondary" id="one-release">Devolver para a DLQ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Reprocess via CSV ===================== -->
+<div class="tab-panel" id="panel-batch">
+  <div class="card">
+    <h2>Reprocessar em lote via CSV</h2>
+    <p class="card-hint">Cada mensagem da DLQ é casada com uma linha do CSV pela chave. As mensagens casadas têm o body alterado pelas regras e são reenviadas; as demais permanecem na DLQ.</p>
+    <div id="batch-picker"></div>
+    <div class="form-row" style="margin-top:12px">
+      <label class="field">
+        <span>Coluna chave no CSV</span>
+        <select id="batch-key-column" class="mono"></select>
+      </label>
+      <label class="field grow">
+        <span>Caminho da chave no body da mensagem (dot notation)</span>
+        <input type="text" id="batch-key-path" class="mono" placeholder="ex.: transaction.id">
+      </label>
+    </div>
+    <div style="margin-top:8px">
+      <span class="field-label">Regras de alteração — <code>caminho.no.body</code> = <code>tipo:valor</code> · valor pode ser literal (<code>number:10</code>, <code>string:XPTO</code>) ou coluna do CSV (<code>number:csv_2</code> = coluna 2)</span>
+      <div id="batch-rules"></div>
+      <button class="btn btn-secondary btn-sm" id="add-rule" type="button">+ Adicionar regra</button>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn" id="batch-run">Iniciar reprocessamento</button>
+    </div>
+    <div id="batch-status" class="hidden" style="margin-top:14px">
+      <p class="mono small" id="batch-summary"></p>
+      <div id="batch-errors"></div>
+      <div id="batch-pending"></div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,21 @@
+<div class="card">
+  <h2>1 · Escolha o arquivo CSV</h2>
+  <div id="picker"></div>
+  <div style="margin-top:12px">
+    <button class="btn" id="open-btn" disabled>Abrir arquivo</button>
+  </div>
+</div>
+
+<div class="card hidden" id="viewer-card">
+  <h2>2 · Visualização — <code id="file-label"></code></h2>
+  <div class="form-row" style="margin-bottom:10px">
+    <label class="field grow">
+      <span>Filtro master (procura em todas as colunas)</span>
+      <input type="text" id="global-filter" class="mono" placeholder="digite para filtrar o arquivo inteiro…">
+    </label>
+    <button class="btn btn-secondary shrink" id="clear-filters">Limpar filtros</button>
+  </div>
+  <div id="pagination-top"></div>
+  <div id="table"></div>
+  <div id="pagination-bottom"></div>
+</div>

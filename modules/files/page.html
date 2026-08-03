@@ -1,0 +1,16 @@
+<div class="card">
+  <h2>Enviar arquivo para a pasta compartilhada</h2>
+  <p class="card-hint">Arquivos enviados aqui ficam disponíveis para todos os módulos (conversores, visualizador, api-executor e dlq-explorer).</p>
+  <div id="upload-drop" class="file-drop">Clique ou arraste arquivos aqui para enviar</div>
+  <input type="file" id="upload-input" class="hidden" multiple>
+</div>
+
+<div class="card">
+  <h2>Arquivos na pasta compartilhada</h2>
+  <div id="file-list"></div>
+</div>
+
+<div class="card hidden" id="preview-card">
+  <h2>Preview: <code id="preview-name"></code></h2>
+  <pre class="code-preview" id="preview-content"></pre>
+</div>

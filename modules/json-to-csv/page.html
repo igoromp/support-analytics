@@ -1,0 +1,50 @@
+<div class="card">
+  <h2>1 · Escolha o arquivo JSON</h2>
+  <div id="picker"></div>
+  <div class="form-row" style="margin-top:12px">
+    <label class="field grow hidden" id="array-path-field">
+      <span>Caminho do array (dot notation)</span>
+      <select id="array-path" class="mono"></select>
+    </label>
+    <button class="btn shrink" id="preview-btn" disabled>Carregar preview</button>
+  </div>
+</div>
+
+<div class="card hidden" id="preview-card">
+  <h2>2 · Preview do conteúdo</h2>
+  <p class="card-hint" id="preview-info"></p>
+  <pre class="code-preview" id="preview-json"></pre>
+</div>
+
+<div class="card hidden" id="fields-card">
+  <h2>3 · Campos do CSV</h2>
+  <p class="card-hint">Campos detectados nos itens (em dot notation). Marque os que devem virar colunas e renomeie se quiser.</p>
+  <div id="field-mapper"></div>
+  <div class="form-row" style="margin-top:12px">
+    <label class="field grow">
+      <span>Adicionar campo manualmente (dot notation)</span>
+      <input type="text" id="extra-field" class="mono" placeholder="ex.: body.settlement_tax.amount">
+    </label>
+    <button class="btn btn-secondary shrink" id="add-field-btn" type="button">+ Adicionar</button>
+  </div>
+</div>
+
+<div class="card hidden" id="output-card">
+  <h2>4 · Gerar CSV</h2>
+  <div class="form-row">
+    <label class="field shrink" style="min-width:130px">
+      <span>Delimitador</span>
+      <select id="delimiter">
+        <option value=",">vírgula (,)</option>
+        <option value=";">ponto e vírgula (;)</option>
+        <option value="&#9;">tab</option>
+      </select>
+    </label>
+    <label class="field grow">
+      <span>Nome do arquivo (ao salvar na pasta compartilhada)</span>
+      <input type="text" id="out-filename" class="mono" placeholder="resultado.csv">
+    </label>
+    <button class="btn btn-secondary shrink" id="download-btn">Baixar CSV</button>
+    <button class="btn shrink" id="save-btn">Salvar na pasta compartilhada</button>
+  </div>
+</div>
