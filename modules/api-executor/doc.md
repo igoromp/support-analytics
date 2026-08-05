@@ -30,6 +30,31 @@ body:  {"valor": "{{taxa}}", "origem": "reprocessamento"}
 > Valores usados na URL são automaticamente URL-encoded. Valores no body JSON
 > são escapados como string. Campos ausentes viram vazio.
 
+### Modos de body
+
+| Modo | Quando usar |
+| ---- | ----------- |
+| **Reconstruir manualmente** | Você escreve o JSON inteiro, com `{{campo}}` onde precisar. |
+| **Basear em payload existente + alterações** | O arquivo já traz o payload pronto (ex.: o retorno de um GET anterior) e você só quer trocar alguns campos. |
+
+No segundo modo informe o **caminho do payload base** dentro do registro (ex.:
+`response`) e uma lista de **alterações** — cada uma com o caminho *dentro do
+payload* e o novo valor. O restante do payload vai intacto.
+
+Quando o valor da alteração é **exatamente um placeholder** (ex.: `{{taxa}}`), o
+tipo original é preservado — número continua número, boolean continua boolean,
+objeto continua objeto. Se você misturar texto com placeholder (ex.:
+`ajuste-{{id}}`), o resultado é string.
+
+## Certificado SSL self-signed (proxy corporativo)
+
+Se a chamada falhar com `self-signed certificate in certificate chain` (comum em
+rede corporativa com proxy que faz inspeção TLS), marque **"Ignorar verificação
+de certificado SSL"** no cadastro da API.
+
+A opção vale **apenas para aquela API** — não é uma configuração global do
+processo, então as demais APIs continuam validando o certificado normalmente.
+
 ## Execução
 
 1. Escolha a **API cadastrada**.

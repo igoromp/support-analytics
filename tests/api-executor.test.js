@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { internals } = require('../modules/api-executor');
 
-const { validateApi, fillTemplate, extractSaved } = internals;
+const { validateApi, fillTemplate, extractSaved, resolveOverrideValue } = internals;
 
 test('validateApi', async (t) => {
   const valida = { name: 'consulta', method: 'GET', url: 'https://api.exemplo.com' };
@@ -90,6 +90,47 @@ test('fillTemplate', async (t) => {
 
   await t.test('texto sem placeholder passa intacto', () => {
     assert.equal(fillTemplate('sem nada', { a: 1 }), 'sem nada');
+  });
+});
+
+test('resolveOverrideValue', async (t) => {
+  const registro = {
+    taxa: 12.5,
+    ativo: true,
+    endereco: { cidade: 'SP', cep: '01000-000' },
+    id: 'P1',
+  };
+
+  await t.test('placeholder único preserva número', () => {
+    assert.equal(resolveOverrideValue('{{taxa}}', registro), 12.5);
+    assert.equal(typeof resolveOverrideValue('{{taxa}}', registro), 'number');
+  });
+
+  await t.test('placeholder único preserva boolean', () => {
+    assert.equal(resolveOverrideValue('{{ativo}}', registro), true);
+    assert.equal(typeof resolveOverrideValue('{{ativo}}', registro), 'boolean');
+  });
+
+  await t.test('placeholder único preserva objeto', () => {
+    assert.deepEqual(resolveOverrideValue('{{endereco}}', registro), { cidade: 'SP', cep: '01000-000' });
+  });
+
+  await t.test('placeholder único com espaços também preserva o tipo', () => {
+    assert.equal(resolveOverrideValue('{{  taxa  }}', registro), 12.5);
+    assert.equal(typeof resolveOverrideValue('{{ ativo }}', registro), 'boolean');
+  });
+
+  await t.test('valor fixo sem placeholder vira a string literal', () => {
+    assert.equal(resolveOverrideValue('ajuste manual', registro), 'ajuste manual');
+  });
+
+  await t.test('valor misto retorna string concatenada', () => {
+    assert.equal(resolveOverrideValue('pedido-{{id}}', registro), 'pedido-P1');
+    assert.equal(resolveOverrideValue('{{id}}/{{taxa}}', registro), 'P1/12.5');
+  });
+
+  await t.test('placeholder único para caminho inexistente retorna undefined', () => {
+    assert.equal(resolveOverrideValue('{{nao.existe}}', registro), undefined);
   });
 });
 
