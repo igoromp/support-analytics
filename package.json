@@ -21,6 +21,7 @@
   "dependencies": {
     "@azure/service-bus": "^7.9.5",
     "express": "^4.21.2",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "undici": "^6.19.8"
   }
 }

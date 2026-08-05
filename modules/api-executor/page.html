@@ -108,13 +108,40 @@
         <button class="btn btn-secondary btn-sm" id="add-header" type="button">+ header</button>
       </div>
     </div>
-    <label class="field" style="margin-top:10px">
-      <span>Body (JSON com placeholders <code>{{campo}}</code>) — ignorado em GET/DELETE</span>
-      <textarea id="api-body" rows="6" placeholder='{"valor": "{{taxa}}", "motivo": "ajuste manual"}'></textarea>
-    </label>
-    <label style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px">
-      <input type="checkbox" id="api-has-response" checked> Esta API tem retorno relevante
-    </label>
+    <div style="margin-top:10px">
+      <span class="field-label">Body — ignorado em GET/DELETE</span>
+      <div class="flex flex-wrap" style="gap:16px;margin-bottom:10px">
+        <label style="display:inline-flex;align-items:center;gap:6px">
+          <input type="radio" name="api-body-mode" id="api-body-mode-template" value="template" checked> Reconstruir manualmente
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:6px">
+          <input type="radio" name="api-body-mode" id="api-body-mode-merge" value="merge"> Basear em payload existente + alterações
+        </label>
+      </div>
+    </div>
+    <div id="api-body-template-wrap">
+      <label class="field">
+        <span>JSON com placeholders <code>{{campo}}</code></span>
+        <textarea id="api-body" rows="6" placeholder='{"valor": "{{taxa}}", "motivo": "ajuste manual"}'></textarea>
+      </label>
+    </div>
+    <div id="api-body-merge-wrap" class="hidden">
+      <label class="field">
+        <span>Caminho do payload base dentro do registro (dot notation — ex.: <code>response</code>)</span>
+        <input type="text" id="api-body-base" class="mono" placeholder="response">
+      </label>
+      <span class="field-label">Alterações no payload base (caminho dentro do payload · valor, aceita <code>{{campo}}</code>)</span>
+      <div id="api-body-overrides-list"></div>
+      <button class="btn btn-secondary btn-sm" id="add-body-override" type="button">+ Adicionar alteração</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin:12px 0">
+      <label style="display:inline-flex;align-items:center;gap:6px">
+        <input type="checkbox" id="api-has-response" checked> Esta API tem retorno relevante
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:6px">
+        <input type="checkbox" id="api-insecure-ssl"> Ignorar verificação de certificado SSL (proxy corporativo com certificado self-signed)
+      </label>
+    </div>
     <div class="flex">
       <button class="btn" id="api-save-btn">Salvar API</button>
       <button class="btn btn-secondary hidden" id="api-cancel-btn" type="button">Cancelar edição</button>

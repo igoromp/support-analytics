@@ -1,10 +1,16 @@
 const express = require('express');
+const { Agent } = require('undici');
 const csv = require('../../core/csv');
 const dot = require('../../core/dotnotation');
 const storage = require('../../core/storage');
 const sharedFiles = require('../../core/shared-files');
 
 const router = express.Router();
+
+// Dispatcher reutilizável para as APIs marcadas com insecureSSL. Só é aplicado
+// por requisição (nada de mexer em NODE_TLS_REJECT_UNAUTHORIZED, que afetaria
+// o processo inteiro).
+const insecureAgent = new Agent({ connect: { rejectUnauthorized: false } });
 
 // ---------------------------------------------------------------------------
 // Cadastro de APIs (persistido em data/config/apis.json — sem banco de dados)
@@ -24,7 +30,10 @@ function validateApi(body) {
 
 router.post('/apis', (req, res) => {
   const error = validateApi(req.body);
-  if (error) return res.status(400).json({ error });
+  if (error) {
+    console.error(`[API Executor] Cadastro de API inválido: ${error}`);
+    return res.status(400).json({ error });
+  }
   const apis = storage.read('apis', []);
   const api = {
     id: storage.newId(),
@@ -34,6 +43,10 @@ router.post('/apis', (req, res) => {
     headers: req.body.headers || [],
     query: req.body.query || [],
     bodyTemplate: req.body.bodyTemplate || '',
+    bodyMode: req.body.bodyMode === 'merge' ? 'merge' : 'template',
+    bodyBase: req.body.bodyBase || '',
+    bodyOverrides: req.body.bodyOverrides || [],
+    insecureSSL: !!req.body.insecureSSL,
     hasResponse: req.body.hasResponse !== false,
     createdAt: new Date().toISOString(),
   };
@@ -44,7 +57,10 @@ router.post('/apis', (req, res) => {
 
 router.put('/apis/:id', (req, res) => {
   const error = validateApi(req.body);
-  if (error) return res.status(400).json({ error });
+  if (error) {
+    console.error(`[API Executor] Atualização de API inválida (id ${req.params.id}): ${error}`);
+    return res.status(400).json({ error });
+  }
   const apis = storage.read('apis', []);
   const idx = apis.findIndex((a) => a.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'API não encontrada.' });
@@ -56,6 +72,10 @@ router.put('/apis/:id', (req, res) => {
     headers: req.body.headers || [],
     query: req.body.query || [],
     bodyTemplate: req.body.bodyTemplate || '',
+    bodyMode: req.body.bodyMode === 'merge' ? 'merge' : 'template',
+    bodyBase: req.body.bodyBase || '',
+    bodyOverrides: req.body.bodyOverrides || [],
+    insecureSSL: !!req.body.insecureSSL,
     hasResponse: req.body.hasResponse !== false,
   };
   storage.write('apis', apis);
@@ -100,11 +120,25 @@ function fillTemplate(template, record, { forUrl = false, jsonContext = false } 
   });
 }
 
+/**
+ * Resolve o valor de uma alteração do modo "merge".
+ * Quando o template é exatamente um único placeholder, devolve o valor bruto do
+ * registro preservando o tipo (número, boolean, objeto). Caso contrário cai no
+ * fillTemplate normal, que sempre produz string.
+ */
+function resolveOverrideValue(template, record) {
+  const single = /^\{\{\s*([^}]+?)\s*\}\}$/.exec(String(template ?? ''));
+  if (single) return record ? dot.get(record, single[1]) : undefined;
+  return fillTemplate(template, record);
+}
+
 router.post('/fields', (req, res) => {
   try {
     const { fields, records } = loadRecords(req.body);
     res.json({ fields, total: records.length });
   } catch (err) {
+    console.error(`[API Executor] Erro ao carregar campos do arquivo: ${err.message}`);
+    console.error(err.stack);
     res.status(400).json({ error: err.message });
   }
 });
@@ -129,21 +163,46 @@ async function executeCall(api, record, timeoutMs) {
   }
 
   let body;
-  if (api.bodyTemplate && !['GET', 'DELETE'].includes(api.method)) {
-    body = fillTemplate(api.bodyTemplate, record, { jsonContext: true });
-    if (!Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')) {
-      headers['Content-Type'] = 'application/json';
+  if (!['GET', 'DELETE'].includes(api.method)) {
+    if (api.bodyMode === 'merge' && api.bodyBase) {
+      // parte de um payload já existente no registro e aplica só as alterações
+      const base = dot.get(record, api.bodyBase);
+      const clone = base && typeof base === 'object' ? JSON.parse(JSON.stringify(base)) : {};
+      for (const ov of api.bodyOverrides || []) {
+        if (!ov || !ov.path) continue;
+        dot.set(clone, ov.path, resolveOverrideValue(ov.value, record));
+      }
+      body = JSON.stringify(clone);
+      if (!Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')) {
+        headers['Content-Type'] = 'application/json';
+      }
+    } else if (api.bodyTemplate) {
+      body = fillTemplate(api.bodyTemplate, record, { jsonContext: true });
+      if (!Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')) {
+        headers['Content-Type'] = 'application/json';
+      }
     }
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const fetchOptions = { method: api.method, headers, body, signal: controller.signal };
+  if (api.insecureSSL) fetchOptions.dispatcher = insecureAgent;
   try {
-    const response = await fetch(url, { method: api.method, headers, body, signal: controller.signal });
+    const response = await fetch(url, fetchOptions);
     const text = await response.text();
     let parsed = null;
     try { parsed = JSON.parse(text); } catch { /* resposta não é JSON */ }
     return { status: response.status, ok: response.ok, body: parsed !== null ? parsed : text, url };
+  } catch (err) {
+    const errorDetails = {
+      message: err.message,
+      cause: err.cause?.message || err.cause,
+      code: err.code,
+      type: err.name,
+    };
+    console.error(`[API Executor] Erro na chamada HTTP para ${url}:`, JSON.stringify(errorDetails, null, 2));
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -162,18 +221,33 @@ function extractSaved(responseBody, saveConfig) {
 router.post('/run', (req, res) => {
   const { apiId, file, workers = 1, timeoutSeconds = 30, save } = req.body || {};
   const api = storage.read('apis', []).find((a) => a.id === apiId);
-  if (!api) return res.status(400).json({ error: 'API não encontrada. Cadastre-a primeiro.' });
+  if (!api) {
+    console.error(`[API Executor] API não encontrada para execução (id ${apiId}).`);
+    return res.status(400).json({ error: 'API não encontrada. Cadastre-a primeiro.' });
+  }
+  console.log(`[API Executor] Iniciando execução da API "${api.name}" (id ${api.id}) — ${api.method} ${api.url}`);
 
   let records = [null]; // execução única quando não há arquivo
   try {
-    if (file && file.name) records = loadRecords(file).records;
+    if (file && file.name) {
+      records = loadRecords(file).records;
+      console.log(`[API Executor] Arquivo carregado: ${file.name} — ${records.length} registro(s).`);
+    } else {
+      console.log('[API Executor] Sem arquivo de dados: execução única.');
+    }
   } catch (err) {
+    console.error(`[API Executor] Erro ao carregar o arquivo de dados: ${err.message}`);
+    console.error(err.stack);
     return res.status(400).json({ error: err.message });
   }
-  if (!records.length) return res.status(400).json({ error: 'O arquivo de dados está vazio.' });
+  if (!records.length) {
+    console.error('[API Executor] O arquivo de dados está vazio.');
+    return res.status(400).json({ error: 'O arquivo de dados está vazio.' });
+  }
 
   const workerCount = Math.max(1, Math.min(20, Number(workers) || 1));
   const timeoutMs = Math.max(1, Math.min(300, Number(timeoutSeconds) || 30)) * 1000;
+  console.log(`[API Executor] Configuração: ${workerCount} worker(s), timeout de ${timeoutMs / 1000}s por chamada.`);
 
   const job = {
     id: storage.newId(),
@@ -217,6 +291,8 @@ router.post('/run', (req, res) => {
       } catch (err) {
         job.failed += 1;
         const detail = err.name === 'AbortError' ? `timeout após ${timeoutMs / 1000}s` : err.message;
+        console.error(`[API Executor] Erro no registro #${index + 1}:`, detail);
+        console.error(err.stack);
         if (job.errors.length < 100) job.errors.push({ index: index + 1, status: 'erro', detail });
         results[index] = { index: index + 1, status: 'erro', ok: false, error: detail };
       } finally {
@@ -243,11 +319,15 @@ router.post('/run', (req, res) => {
       }
       job.status = 'finished';
       job.finishedAt = new Date().toISOString();
+      console.log(`[API Executor] Execução finalizada — ${job.ok} ok / ${job.failed} falha(s) de ${job.total}.`);
+      if (job.savedAs) console.log(`[API Executor] Retorno salvo em: ${job.savedAs}`);
     })
     .catch((err) => {
       job.status = 'error';
       job.errors.push({ index: 0, status: 'fatal', detail: err.message });
       job.finishedAt = new Date().toISOString();
+      console.error(`[API Executor] Erro fatal no job ${job.id}: ${err.message}`);
+      console.error(err.stack);
     });
 
   res.json({ jobId: job.id, total: job.total });
@@ -273,5 +353,5 @@ module.exports = {
   },
   router,
   // funções puras expostas para os testes (o module-loader só lê meta e router)
-  internals: { validateApi, fillTemplate, extractSaved },
+  internals: { validateApi, fillTemplate, extractSaved, resolveOverrideValue },
 };

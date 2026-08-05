@@ -14,7 +14,14 @@
   const methodSelect = document.getElementById('api-method');
   const urlInput = document.getElementById('api-url');
   const bodyInput = document.getElementById('api-body');
+  const bodyModeTemplateRadio = document.getElementById('api-body-mode-template');
+  const bodyModeMergeRadio = document.getElementById('api-body-mode-merge');
+  const bodyTemplateWrap = document.getElementById('api-body-template-wrap');
+  const bodyMergeWrap = document.getElementById('api-body-merge-wrap');
+  const bodyBaseInput = document.getElementById('api-body-base');
+  const bodyOverridesList = document.getElementById('api-body-overrides-list');
   const hasResponseCheck = document.getElementById('api-has-response');
+  const insecureSSLCheck = document.getElementById('api-insecure-ssl');
   const queryList = document.getElementById('api-query-list');
   const headersList = document.getElementById('api-headers-list');
   const apiListEl = document.getElementById('api-list');
@@ -45,6 +52,34 @@
   document.getElementById('add-query').addEventListener('click', () => kvRow(queryList));
   document.getElementById('add-header').addEventListener('click', () => kvRow(headersList));
 
+  // ---------------- modo do body ----------------
+  function toggleBodyMode() {
+    const merge = bodyModeMergeRadio.checked;
+    bodyTemplateWrap.classList.toggle('hidden', merge);
+    bodyMergeWrap.classList.toggle('hidden', !merge);
+  }
+
+  bodyModeTemplateRadio.addEventListener('change', toggleBodyMode);
+  bodyModeMergeRadio.addEventListener('change', toggleBodyMode);
+
+  function overrideRow(path = '', value = '') {
+    const row = el('div', { class: 'form-row', style: 'margin-bottom:6px' }, [
+      el('input', { type: 'text', class: 'mono ov-path', placeholder: 'caminho no payload · ex.: settlement.tax', value: path }),
+      el('input', { type: 'text', class: 'mono ov-value', placeholder: 'novo valor (aceita {{campo}})', value }),
+      el('button', { class: 'btn btn-ghost shrink', type: 'button', text: '✕', style: 'color:var(--danger)', on: { click: () => row.remove() } }),
+    ]);
+    bodyOverridesList.appendChild(row);
+  }
+
+  function readOverrides() {
+    return [...bodyOverridesList.querySelectorAll('.form-row')].map((row) => ({
+      path: row.querySelector('.ov-path').value.trim(),
+      value: row.querySelector('.ov-value').value,
+    })).filter((ov) => ov.path);
+  }
+
+  document.getElementById('add-body-override').addEventListener('click', () => overrideRow());
+
   function resetForm() {
     editingId = null;
     formTitle.textContent = 'Cadastrar nova API';
@@ -54,7 +89,12 @@
     methodSelect.value = 'GET';
     urlInput.value = '';
     bodyInput.value = '';
+    bodyModeTemplateRadio.checked = true;
+    bodyBaseInput.value = '';
+    bodyOverridesList.innerHTML = '';
+    toggleBodyMode();
     hasResponseCheck.checked = true;
+    insecureSSLCheck.checked = false;
     queryList.innerHTML = '';
     headersList.innerHTML = '';
   }
@@ -69,7 +109,11 @@
       query: readKvList(queryList),
       headers: readKvList(headersList),
       bodyTemplate: bodyInput.value,
+      bodyMode: bodyModeMergeRadio.checked ? 'merge' : 'template',
+      bodyBase: bodyBaseInput.value.trim(),
+      bodyOverrides: readOverrides(),
       hasResponse: hasResponseCheck.checked,
+      insecureSSL: insecureSSLCheck.checked,
     };
     try {
       if (editingId) {
@@ -95,7 +139,14 @@
     methodSelect.value = a.method;
     urlInput.value = a.url;
     bodyInput.value = a.bodyTemplate || '';
+    bodyModeMergeRadio.checked = a.bodyMode === 'merge';
+    bodyModeTemplateRadio.checked = a.bodyMode !== 'merge';
+    bodyBaseInput.value = a.bodyBase || '';
+    bodyOverridesList.innerHTML = '';
+    (a.bodyOverrides || []).forEach((ov) => overrideRow(ov.path, ov.value));
+    toggleBodyMode();
     hasResponseCheck.checked = a.hasResponse !== false;
+    insecureSSLCheck.checked = !!a.insecureSSL;
     queryList.innerHTML = '';
     headersList.innerHTML = '';
     (a.query || []).forEach((q) => kvRow(queryList, q.key, q.value));
